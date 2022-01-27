@@ -182,14 +182,12 @@ TEST_CASE("Unit_hipGetDeviceProperties_ArchPropertiesTst") {
 TEST_CASE("Unit_hipGetDeviceProperties_NegTst") {
   hipDeviceProp_t prop;
 
-#if HT_AMD
-  SECTION("props is nullptr") {
-    int device;
-    HIP_CHECK(hipGetDevice(&device));
-    // this test case results in segmentation fault on NVCC
-    REQUIRE_FALSE(hipSuccess == hipGetDeviceProperties(nullptr, device));
-  }
-#endif
+SECTION("props is nullptr") {
+  int device;
+  HIP_CHECK(hipGetDevice(&device));
+  // this test case results in segmentation fault on NVCC
+  REQUIRE_FALSE(hipSuccess == hipGetDeviceProperties(nullptr, device));
+}
 
   SECTION("device is -1") {
     REQUIRE_FALSE(hipSuccess == hipGetDeviceProperties(&prop, -1));

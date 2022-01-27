@@ -41,8 +41,6 @@ TEST_CASE("Unit_hipChooseDevice_ValidateDevId") {
  * Scenario1: Validates if dev = nullptr returns error code
  * Scenario2: Validates if prop = nullptr returns error code
  */
-#if HT_AMD
-// These test scenarios fail on NVIDIA.
 TEST_CASE("Unit_hipChooseDevice_NegTst") {
   hipDeviceProp_t prop;
   int dev = -1;
@@ -57,4 +55,3 @@ TEST_CASE("Unit_hipChooseDevice_NegTst") {
     REQUIRE_FALSE(hipSuccess == hipChooseDevice(&dev, nullptr));
   }
 }
-#endif
