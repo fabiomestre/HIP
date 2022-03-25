@@ -22,6 +22,7 @@ THE SOFTWARE.
 
 #pragma once
 #include "hip_test_context.hh"
+#include <hip_test_rtc.hh>
 #include <catch.hpp>
 #include <stdlib.h>
 
@@ -170,6 +171,31 @@ inline bool isImageSupported() {
 static inline void HIP_SKIP_TEST(char const* const reason) noexcept {
   // ctest is setup to parse for "HIP_SKIP_THIS_TEST", at which point it will skip the test.
   std::cout << "Skipping test. Reason: " << reason << '\n' << "HIP_SKIP_THIS_TEST" << std::endl;
+}
+
+/**
+ * @brief Launch a kernel using either HIP or HIP RTC.
+ *
+ * @tparam Typenames A list of typenames used by the kernel (unused if the kernel is not a template).
+ * @tparam K The kernel type. Expects a function or template when RTC is disabled. Expects a string instead when RTC is enabled.
+ * @tparam Dim Can be either dim3 or int.
+ * @tparam Args A list of kernel arguments to be forwarded.
+ * @param kernel The kernel to be launched (defined in kernels.hh)
+ * @param numBlocks
+ * @param numThreads
+ * @param memPerBlock
+ * @param stream
+ * @param packedArgs A list of kernel arguments to be forwarded.
+ */
+template <typename... Typenames, typename K, typename Dim, typename... Args>
+void launchKernel(K kernel, Dim numBlocks, Dim numThreads, std::uint32_t memPerBlock,
+                  hipStream_t stream, Args&&... packedArgs) {
+#ifndef RTC_ENABLED
+    kernel<<<numBlocks, numThreads, memPerBlock, stream>>>(std::forward<Args>(packedArgs)...);
+#else
+    launchRTCKernel<Typenames...>(kernel, numBlocks, numThreads, memPerBlock, stream,
+                                std::forward<Args>(packedArgs)...);
+#endif
 }
 }
 
