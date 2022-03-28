@@ -123,6 +123,17 @@ TEST_CASE("Unit_hipStreamQuery_WithPendingWork") {
   HIP_CHECK(hipStreamDestroy(waitingStream));
 }
 
+TEST_CASE("OOPS_NEW_PR_FOR_THIS_TEST_CASE") {
+  hipStream_t stream{nullptr};
+  HIP_CHECK(hipStreamCreate(&stream));
+
+  hipLaunchKernelGGL(empty_kernel, dim3(1), dim3(1), 0, stream);
+  HIP_CHECK(hipStreamSynchronize(stream));
+
+  HIP_CHECK(hipStreamQuery(stream));
+  HIP_CHECK(hipStreamDestroy(stream));
+}
+
 /**
  * @brief Empty kernel to ensure work finishes on the stream quickly
  *
