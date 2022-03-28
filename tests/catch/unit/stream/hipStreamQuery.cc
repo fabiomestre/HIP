@@ -49,9 +49,10 @@ TEST_CASE("Unit_hipStreamQuery_SubmitWorkOnStreamAndQueryNullStream") {
 TEST_CASE("Unit_hipStreamQuery_NullStreamQuery") {
   HIP_CHECK(hipStreamQuery(hip::nullStream));
   hip::stream::waiting_kernel<<<1, 1, 0, hip::nullStream>>>();
-  HIP_CHECK_ERROR(hipStreamQuery(hip::nullStream), hipErrorNotReady);
-
-  std::thread signalingThread = hip::stream::startSignalingThread();
-  HIP_CHECK(hipStreamSynchronize(hip::nullStream));
-  signalingThread.join();
 }
+
+TEST_CASE("OMD"){
+  HIP_CHECK(hipStreamQuery(hip::nullStream));
+  hip::stream::waiting_kernel<<<1, 1, 0, hip::nullStream>>>();
+}
+
