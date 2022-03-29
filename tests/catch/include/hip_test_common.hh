@@ -176,8 +176,10 @@ static inline void HIP_SKIP_TEST(char const* const reason) noexcept {
 /**
  * @brief Launch a kernel using either HIP or HIP RTC.
  *
- * @tparam Typenames A list of typenames used by the kernel (unused if the kernel is not a template).
- * @tparam K The kernel type. Expects a function or template when RTC is disabled. Expects a string instead when RTC is enabled.
+ * @tparam Typenames A list of typenames used by the kernel (unused if the kernel is not a
+ * template).
+ * @tparam K The kernel type. Expects a function or template when RTC is disabled. Expects a
+ * function pointer instead when RTC is enabled.
  * @tparam Dim Can be either dim3 or int.
  * @tparam Args A list of kernel arguments to be forwarded.
  * @param kernel The kernel to be launched (defined in kernels.hh)
@@ -197,7 +199,7 @@ void launchKernel(K kernel, Dim numBlocks, Dim numThreads, std::uint32_t memPerB
                                 std::forward<Args>(packedArgs)...);
 #endif
 }
-}
+}  // namespace HipTest
 
 
 // This must be called in the beginning of image test app's main() to indicate whether image
