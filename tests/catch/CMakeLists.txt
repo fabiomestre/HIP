@@ -132,7 +132,7 @@ if (WIN32)
 endif()
 
 if(HIP_PLATFORM MATCHES "amd" AND HIP_COMPILER MATCHES "clang")
-    add_compile_options(-Wall -Wextra -pedantic -Werror)
+    add_compile_options(-Wall -Wextra -pedantic -Werror -Wno-deprecated)
 endif()
 
 cmake_policy(PUSH)
