@@ -163,6 +163,7 @@ void launchKernel(K kernel, Dim numBlocks, Dim numThreads, std::uint32_t memPerB
   validateArguments(kernel, packedArgs...);
   kernel<<<numBlocks, numThreads, memPerBlock, stream>>>(std::forward<Args>(packedArgs)...);
 #else
+  std::cout << "Launching Kernel using HIP RTC" << std::endl;
   launchRTCKernel<Typenames...>(kernel, numBlocks, numThreads, memPerBlock, stream,
                                 std::forward<Args>(packedArgs)...);
 #endif
