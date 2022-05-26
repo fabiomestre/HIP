@@ -117,6 +117,30 @@ static inline int RAND_R(unsigned* rand_seed)
   #endif
 }
 
+/** TODO document this
+ * @brief Get the Expected Args object
+ * 
+ * @tparam FArgs 
+ * @return constexpr std::tuple<FArgs...> 
+ */
+template <typename ...FArgs>
+constexpr std::tuple<FArgs...> getExpectedArgs(void(FArgs...)){};
+
+/** TODO document this
+ * @brief 
+ * 
+ * @tparam F 
+ * @tparam Args 
+ * @param f 
+ * @param As 
+ */
+template <typename F, typename ...Args>
+void validateArguments(F f, Args... As){
+    using expectedArgsTuple = decltype(getExpectedArgs(f));
+    // using givenArgsTuple = decltype(std::tuple<Args...>);
+    static_assert(std::is_same<expectedArgsTuple, std::tuple<Args...>>::value, "Kernel arguments types must match exactly!");
+}
+
 /**
  * @brief Launch a kernel using either HIP or HIP RTC.
  *
@@ -137,6 +161,7 @@ template <typename... Typenames, typename K, typename Dim, typename... Args>
 void launchKernel(K kernel, Dim numBlocks, Dim numThreads, std::uint32_t memPerBlock,
                   hipStream_t stream, Args&&... packedArgs) {
 #ifndef ENABLE_RTC_TESTING
+  validateArguments(kernel, packedArgs...);
   kernel<<<numBlocks, numThreads, memPerBlock, stream>>>(std::forward<Args>(packedArgs)...);
 #else
   launchRTCKernel<Typenames...>(kernel, numBlocks, numThreads, memPerBlock, stream,
