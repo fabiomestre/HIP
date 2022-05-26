@@ -180,7 +180,7 @@ static inline void HIP_SKIP_TEST(char const* const reason) noexcept {
  * @return constexpr std::tuple<FArgs...>
  */
 template <typename ...FArgs>
-constexpr std::tuple<FArgs...> getExpectedArgs(void(FArgs...)){};
+std::tuple<FArgs...> getExpectedArgs(void(FArgs...)){};
 
 /** TODO document this
  * @brief
@@ -191,9 +191,8 @@ constexpr std::tuple<FArgs...> getExpectedArgs(void(FArgs...)){};
  * @param As
  */
 template <typename F, typename ...Args>
-void validateArguments(F f, Args... As){
+void validateArguments(F f, Args...){
     using expectedArgsTuple = decltype(getExpectedArgs(f));
-    // using givenArgsTuple = decltype(std::tuple<Args...>);
     static_assert(std::is_same<expectedArgsTuple, std::tuple<Args...>>::value, "Kernel arguments types must match exactly!");
 }
 

@@ -148,7 +148,7 @@ inline hiprtcProgram compileRTC(std::string& rtcKernel, std::string& kernelNameE
   for (const std::string& s : architectures) {
     sarg += s + " ";
   }
-  if (sarg[sarg.size - 1] == ' ') {
+  if (sarg[sarg.size() - 1] == ' ') {
     sarg.pop_back();
   }
 #else
