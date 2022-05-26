@@ -134,7 +134,7 @@ TEST_CASE("Unit_hipHostMalloc_Basic") {
     dim3 dimBlock(512, 1, 1);
     HipTest::launchKernel<float>(HipTest::vectorADD<float>, dimGrid, dimBlock,
                        0, 0, static_cast<const float*>(A_d),
-                       static_cast<const float*>(B_d), C_d, LEN);
+                       static_cast<const float*>(B_d), C_d, static_cast<size_t>(LEN));
     HIP_CHECK(hipMemcpy(C_h, C_d, LEN*sizeof(float),
                         hipMemcpyDeviceToHost));
     HIP_CHECK(hipDeviceSynchronize());

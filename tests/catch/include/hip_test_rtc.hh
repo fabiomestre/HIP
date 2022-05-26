@@ -34,7 +34,7 @@ THE SOFTWARE.
 
 namespace HipTest {
 
-struct KernelArgument{
+struct KernelArgument {
   const void* ptr;
   size_t sizeRequirement;
   size_t alignmentRequirement;
@@ -45,7 +45,8 @@ struct KernelArgument{
  *
  * @param kernelName the name of the kernel (e.g. "HipTest::VectorADD")
  * @param typenames the typenames used by this kernel (e.g. "float").
- * @return std::string the reconstructed expression (e.g. "VectorADD<float>""). Returns kernelName instead if the kernel is not a template.
+ * @return std::string the reconstructed expression (e.g. "VectorADD<float>""). Returns kernelName
+ * instead if the kernel is not a template.
  */
 inline std::string reconstructExpression(std::string& kernelName,
                                          std::vector<std::string>& typenames) {
@@ -99,9 +100,10 @@ inline std::vector<char> getKernelCode(hiprtcProgram& rtcProgram) {
 
 /**
  * @brief Compiles a kernel using HIP RTC
- * 
+ *
  * @param rtcKernel the name of the kernel to compile.
- * @param kernelNameExpression the name expression to be added to the RTC program (e.g. HipTest::VectorADD<float>)
+ * @param kernelNameExpression the name expression to be added to the RTC program (e.g.
+ * HipTest::VectorADD<float>)
  * @return hiprtcProgram the compiled rtc program.
  */
 inline hiprtcProgram compileRTC(std::string& rtcKernel, std::string& kernelNameExpression) {
@@ -131,10 +133,10 @@ inline hiprtcProgram compileRTC(std::string& rtcKernel, std::string& kernelNameE
                       nullptr);
 
 #ifdef __HIP_PLATFORM_AMD__
-  
+
   int deviceCount;
   REQUIRE(hipSuccess == hipGetDeviceCount(&deviceCount));
-  
+
   std::set<std::string> architectures{};
   for (int i = 0; i < deviceCount; ++i) {
     hipDeviceProp_t props;
@@ -143,8 +145,11 @@ inline hiprtcProgram compileRTC(std::string& rtcKernel, std::string& kernelNameE
   }
 
   std::string sarg{};
-  for (const std::string& s: architectures) {
+  for (const std::string& s : architectures) {
     sarg += s + " ";
+  }
+  if (sarg[sarg.size - 1] == ' ') {
+    sarg.pop_back();
   }
 #else
   std::string sarg = std::string("--fmad=false");
@@ -159,12 +164,13 @@ inline hiprtcProgram compileRTC(std::string& rtcKernel, std::string& kernelNameE
 
 /**
  * @brief Get a typename as a string
- * 
+ *
  * @tparam T The typename
  * @return std::string the string representation of T
  */
 template <typename T> std::string getTypeName() {
   std::string name, prefix, suffix;
+
 
 #ifdef __clang__
   name = __PRETTY_FUNCTION__;
@@ -173,26 +179,28 @@ template <typename T> std::string getTypeName() {
 #elif defined(__GNUC__)
   name = __PRETTY_FUNCTION__;
   prefix = "std::string HipTest::getTypeName() [with T = ";
-  suffix = "]";
+  suffix = "; std::string = std::__cxx11::basic_string<char>]";
 #elif defined(_MSC_VER)
   name = __FUNCSIG__;
   prefix = "std::string __cdecl HipTest::getTypeName<";
   suffix = ">(void)";
 #endif
 
-  return name.substr(prefix.size(), name.find_last_of(suffix) - prefix.size());
+  return name.substr(prefix.size(), name.rfind(suffix) - prefix.size());
 }
 
 /**
  * @brief Compiles and launches a kernel using HIP RTC
- * 
- * @tparam Typenames A list of typenames used by the kernel (unused if the kernel is not a template).
+ *
+ * @tparam Typenames A list of typenames used by the kernel (unused if the kernel is not a
+ * template).
  * @tparam Args A list of kernel arguments to be forwarded.
- * @param getKernelName A function wrapper that returns the name of the kernel to launch (check kernels.hh for more info)
- * @param numBlocks 
- * @param numThreads 
- * @param memPerBlock 
- * @param stream 
+ * @param getKernelName A function wrapper that returns the name of the kernel to launch (check
+ * kernels.hh for more info)
+ * @param numBlocks
+ * @param numThreads
+ * @param memPerBlock
+ * @param stream
  * @param packedArgs A list of kernel arguments to be forwarded.
  */
 template <typename... Typenames, typename... Args>
@@ -234,7 +242,7 @@ void launchRTCKernel(std::string (*getKernelName)(), dim3 numBlocks, dim3 numThr
 
 /**
  * @brief Template overload for when numBlocks and numThreads is an integer.
- * 
+ *
  */
 template <typename... Typenames, typename... Args>
 void launchRTCKernel(std::string kernelName, int numBlocks, int numThreads,
