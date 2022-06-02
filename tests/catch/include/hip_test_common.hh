@@ -175,20 +175,20 @@ static inline void HIP_SKIP_TEST(char const* const reason) noexcept {
 
 /** TODO document this
  * @brief Get the Expected Args object
- * 
- * @tparam FArgs 
- * @return constexpr std::tuple<FArgs...> 
+ *
+ * @tparam FArgs
+ * @return constexpr std::tuple<FArgs...>
  */
 template <typename ...FArgs>
 std::tuple<FArgs...> getExpectedArgs(void(FArgs...)){};
 
 /** TODO document this
- * @brief 
- * 
- * @tparam F 
- * @tparam Args 
- * @param f 
- * @param As 
+ * @brief
+ *
+ * @tparam F
+ * @tparam Args
+ * @param f
+ * @param As
  */
 template <typename F, typename ...Args>
 void validateArguments(F f, Args...){
