@@ -32,6 +32,7 @@ This testfile verifies the following scenarios of hipHostMalloc API
 #include<hip_test_checkers.hh>
 #include<kernels.hh>
 #include<hip_test_common.hh>
+#include <hip_test_context.hh>
 
 #define SYNC_EVENT 0
 #define SYNC_STREAM 1
@@ -143,6 +144,7 @@ TEST_CASE("Unit_hipHostMalloc_Basic") {
     HIP_CHECK(hipHostFree(A_h));
     HIP_CHECK(hipHostFree(B_h));
     HIP_CHECK(hipHostFree(C_h));
+    TestContext::get().cleanContext();
   }
 }
 /*
@@ -180,6 +182,7 @@ TEST_CASE("Unit_hipHostMalloc_NonCoherent") {
                    SYNC_STREAM, ptrType);
   CheckHostPointer(numElements, A, hipEventReleaseToSystem,
                    SYNC_EVENT, ptrType);
+  TestContext::get().cleanContext();
 }
 
 /*

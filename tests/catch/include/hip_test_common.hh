@@ -173,27 +173,28 @@ static inline void HIP_SKIP_TEST(char const* const reason) noexcept {
   std::cout << "Skipping test. Reason: " << reason << '\n' << "HIP_SKIP_THIS_TEST" << std::endl;
 }
 
-/** TODO document this
- * @brief Get the Expected Args object
+/**
+ * @brief Helper template that returns the expected arguments of a kernel.
  *
- * @tparam FArgs
- * @return constexpr std::tuple<FArgs...>
+ * @return constexpr std::tuple<FArgs...> the expected arguments of the kernel.
  */
-template <typename ...FArgs>
-std::tuple<FArgs...> getExpectedArgs(void(FArgs...)){};
+template <typename... FArgs> std::tuple<FArgs...> getExpectedArgs(void(FArgs...)){};
 
-/** TODO document this
- * @brief
+/**
+ * @brief Asserts that the types of the arguments of a function match exactly with the types in the
+ * function signature.
+ * This is necessary because HIP RTC does not do implicit casting of the kernel
+ * parameters.
+ * In order to get the kernel function signature, this function should only called when
+ * RTC is disabled.
  *
- * @tparam F
- * @tparam Args
- * @param f
- * @param As
+ * @tparam F the kernel function
+ * @tparam Args the parameters that will be passed to the kernel.
  */
-template <typename F, typename ...Args>
-void validateArguments(F f, Args...){
-    using expectedArgsTuple = decltype(getExpectedArgs(f));
-    static_assert(std::is_same<expectedArgsTuple, std::tuple<Args...>>::value, "Kernel arguments types must match exactly!");
+template <typename F, typename... Args> void validateArguments(F f, Args...) {
+  using expectedArgsTuple = decltype(getExpectedArgs(f));
+  static_assert(std::is_same<expectedArgsTuple, std::tuple<Args...>>::value,
+                "Kernel arguments types must match exactly!");
 }
 
 /**
@@ -215,11 +216,10 @@ void validateArguments(F f, Args...){
 template <typename... Typenames, typename K, typename Dim, typename... Args>
 void launchKernel(K kernel, Dim numBlocks, Dim numThreads, std::uint32_t memPerBlock,
                   hipStream_t stream, Args&&... packedArgs) {
-#ifndef ENABLE_RTC_TESTING
+#ifndef RTC_TESTING
     validateArguments(kernel, packedArgs...);
     kernel<<<numBlocks, numThreads, memPerBlock, stream>>>(std::forward<Args>(packedArgs)...);
 #else
-    std::cout << "Launching Kernel using HIP RTC" << std::endl;
   launchRTCKernel<Typenames...>(kernel, numBlocks, numThreads, memPerBlock, stream,
                                 std::forward<Args>(packedArgs)...);
 #endif

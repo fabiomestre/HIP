@@ -1,4 +1,4 @@
-if(NOT ENABLE_RTC_TESTING)
+if(NOT RTC_TESTING)
     set(TEST_SRC
         Set.cpp
     )

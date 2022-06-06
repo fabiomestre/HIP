@@ -24,7 +24,7 @@ THE SOFTWARE.
 // forces synchronization : set
 #include <hip_test_checkers.hh>
 #include <kernels.hh>
-
+#include <hip_test_context.hh>
 #include <hip_test_common.hh>
 
 TEST_CASE("Unit_hipEventRecord") {
@@ -87,5 +87,5 @@ static_cast<const float*>(A_d), static_cast<const float*>(B_d), C_d, N);
     HIP_CHECK(hipEventDestroy(stop));
 
     HipTest::checkVectorADD(A_h, B_h, C_h, N, true);
-
+    TestContext::get().cleanContext();
 }

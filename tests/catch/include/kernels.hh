@@ -22,7 +22,7 @@ THE SOFTWARE.
 #include <hip_test_common.hh>
 #include <map>
 
-#ifndef ENABLE_RTC_TESTING
+#ifndef RTC_TESTING
 
 __global__ void Set(int* Ad, int val);
 

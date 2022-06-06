@@ -109,11 +109,11 @@ include_directories(
     ${JSON_PARSER}
 )
 
-option(ENABLE_RTC_TESTING "Run tests using HIP RTC to compile the kernels" OFF)
-if (ENABLE_RTC_TESTING)
-    add_definitions(-DENABLE_RTC_TESTING=ON)
+option(RTC_TESTING "Run tests using HIP RTC to compile the kernels" OFF)
+if (RTC_TESTING)
+    add_definitions(-DRTC_TESTING=ON)
 endif()
-add_definitions(-DKERNELS_PATH=\\\"${CMAKE_CURRENT_SOURCE_DIR}/kernels/\\\")
+add_definitions(-DKERNELS_PATH="${CMAKE_CURRENT_SOURCE_DIR}/kernels/")
 
 file(COPY ./hipTestMain/config DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/hipTestMain)
 file(COPY ./external/Catch2/cmake/Catch2/CatchAddTests.cmake DESTINATION ${CMAKE_CURRENT_BINARY_DIR}/script)

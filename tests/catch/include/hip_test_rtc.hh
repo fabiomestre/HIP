@@ -31,6 +31,8 @@ THE SOFTWARE.
 #include <fstream>
 #include <sstream>
 #include <set>
+#include "hip/hip_runtime_api.h"
+#include "hip_test_context.hh"
 
 namespace HipTest {
 
@@ -132,6 +134,7 @@ inline hiprtcProgram compileRTC(std::string& rtcKernel, std::string& kernelNameE
   hiprtcCreateProgram(&rtcProgram, kernelCode.c_str(), (fileName + ".cu").c_str(), 0, nullptr,
                       nullptr);
 
+  std::vector<const char*> options{};
 #ifdef __HIP_PLATFORM_AMD__
 
   int deviceCount;
@@ -144,20 +147,15 @@ inline hiprtcProgram compileRTC(std::string& rtcKernel, std::string& kernelNameE
     architectures.insert(std::string{"--gpu-architecture="} + props.gcnArchName);
   }
 
-  std::string sarg{};
-  for (const std::string& s : architectures) {
-    sarg += s + " ";
-  }
-  if (sarg[sarg.size() - 1] == ' ') {
-    sarg.pop_back();
+  for (auto& architecture : architectures) {
+    options.push_back(architecture.c_str());
   }
 #else
-  std::string sarg = std::string("--fmad=false");
+  options.push_back("--fmad=false");
 #endif
-  const char* options[] = {sarg.c_str()};
 
   REQUIRE(HIPRTC_SUCCESS == hiprtcAddNameExpression(rtcProgram, kernelNameExpression.c_str()));
-  REQUIRE(HIPRTC_SUCCESS == hiprtcCompileProgram(rtcProgram, 1, options));
+  REQUIRE(HIPRTC_SUCCESS == hiprtcCompileProgram(rtcProgram, 1, options.data()));
 
   return rtcProgram;
 }
@@ -190,6 +188,20 @@ template <typename T> std::string getTypeName() {
 }
 
 /**
+ * @brief Tells the user that the kernels are using HIP RTC. Prints only once per test.
+ *
+ */
+static inline void printInfo() {
+  static bool alreadyPrinted{false};
+
+  if (!alreadyPrinted) {
+    std::cout << "INFO: This test is running using HIP RTC to compile and run the kernels."
+              << std::endl;
+    alreadyPrinted = true;
+  }
+}
+
+/**
  * @brief Compiles and launches a kernel using HIP RTC
  *
  * @tparam Typenames A list of typenames used by the kernel (unused if the kernel is not a
@@ -206,22 +218,36 @@ template <typename T> std::string getTypeName() {
 template <typename... Typenames, typename... Args>
 void launchRTCKernel(std::string (*getKernelName)(), dim3 numBlocks, dim3 numThreads,
                      std::uint32_t memPerBlock, hipStream_t stream, Args&&... packedArgs) {
+
+  printInfo();
+  TestContext& testContext = TestContext::get();
   std::string kernelName = (*getKernelName)();
+
   std::vector<std::string> kernelTypenames{std::string(HipTest::getTypeName<Typenames>())...};
   std::string kernelExpression = reconstructExpression(kernelName, kernelTypenames);
 
-  /* TODO Implement a caching mechanism so that kernels are only compiled once per test */
-  hiprtcProgram rtcProgram{compileRTC(kernelName, kernelExpression)};
-  std::vector<char> compiledCode{getKernelCode(rtcProgram)};
+  if (testContext.getFunction(kernelExpression) == nullptr) {
+    hiprtcProgram rtcProgram{compileRTC(kernelName, kernelExpression)};
+    std::vector<char> compiledCode{getKernelCode(rtcProgram)};
 
-  const char* loweredName;
-  REQUIRE(HIPRTC_SUCCESS ==
+    hipModule_t module;
+
+    REQUIRE(hipSuccess == hipModuleLoadData(&module, compiledCode.data()));
+
+      hipFunction_t kernelFunction;
+
+    const char* loweredName;
+    REQUIRE(HIPRTC_SUCCESS ==
           hiprtcGetLoweredName(rtcProgram, kernelExpression.c_str(), &loweredName));
+    REQUIRE(hipSuccess == hipModuleGetFunction(&kernelFunction, module, loweredName));
 
-  hipModule_t module;
-  hipFunction_t kernelFunction;
-  REQUIRE(hipSuccess == hipModuleLoadData(&module, compiledCode.data()));
-  REQUIRE(hipSuccess == hipModuleGetFunction(&kernelFunction, module, loweredName));
+    /* After obtaining the kernelFunction, the program is no longer needed. So it can be destroyed */
+    REQUIRE(HIPRTC_SUCCESS == hiprtcDestroyProgram(&rtcProgram));
+
+    testContext.trackRtcState(kernelExpression, module, kernelFunction);
+  }
+
+  hipFunction_t kernelFunction = testContext.getFunction(kernelExpression);
 
   std::vector<KernelArgument> args = {
       {reinterpret_cast<const void*>(&packedArgs), sizeof(Args), alignof(Args)}...};
@@ -237,7 +263,6 @@ void launchRTCKernel(std::string (*getKernelName)(), dim3 numBlocks, dim3 numThr
           hipModuleLaunchKernel(kernelFunction, numBlocks.x, numBlocks.y, numBlocks.z, numThreads.x,
                                 numThreads.y, numThreads.z, memPerBlock, stream, nullptr,
                                 config_array));
-  REQUIRE(HIPRTC_SUCCESS == hiprtcDestroyProgram(&rtcProgram));
 }
 
 /**
