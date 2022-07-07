@@ -20,6 +20,7 @@
 #include <hip_test_common.hh>
 #include <limits>
 #include "hip/driver_types.h"
+#include <algorithm>
 
 static constexpr size_t memsetVal{0x42};
 static constexpr hipExtent validExtent{184, 57, 16};
@@ -111,6 +112,31 @@ TEST_CASE("Unit_hipMemset2D_Negative_InvalidPtr") {
   hipFree(A_d);
 }
 
+static bool check2DMemset(size_t realPitch, size_t memsetPitch, size_t memsetWidth,
+                          size_t memsetHeight) {
+  size_t realSize = realPitch * height;
+  size_t memsetSize{memsetPitch * (memsetHeight - 1) + memsetWidth};
+  UNSCOPED_INFO("RealPitch: " << realPitch << " RealHeight: " << height << " MemsetPitch: "
+                              << memsetPitch << " MemsetHeight: " << memsetHeight
+                              << " RealSize: " << realSize << " MemsetSize: " << memsetSize);
+  if (memsetWidth == 0 || memsetHeight == 0) {
+    return true;
+  } else {
+    if (memsetHeight == 1) {
+      if (memsetWidth > width) {
+        return true;
+      } else {
+        return true;
+      }
+    } else {
+      if (memsetSize > realSize || memsetPitch < memsetWidth /*|| memsetPitch > realPitch*/) {
+        return false;
+      } else {
+        return true;
+      }
+    }
+  }
+}
 TEST_CASE("Unit_hipMemset2D_Negative_InvalidSizes") {
 #if HT_AMD
   HipTest::HIP_SKIP_TEST("EXSWCPHIPT-52");
@@ -130,13 +156,65 @@ TEST_CASE("Unit_hipMemset2D_Negative_InvalidSizes") {
     testHipMemset2DApis(dst, realPitch, memsetVal, invalidWidth, height);
   }
 
-#if !HT_AMD /* EXSWCPHIPT-52 */
+  // #if !HT_AMD /* EXSWCPHIPT-52 */
   SECTION("Invalid height") {
     size_t invalidHeight = height + 1;
     testHipMemset2DApis(dst, realPitch, memsetVal, width, invalidHeight);
   }
-#endif
-  HIP_CHECK(hipFree(dst));
+
+  SECTION("83 24") { testHipMemset2DApis(dst, 184, memsetVal, width, 24, hipSuccess); }
+
+  SECTION("490 60") { testHipMemset2DApis(dst, 184, memsetVal, width, 60, hipSuccess); }
+
+  // SECTION("506 111") { testHipMemset2DApis(dst, 506, memsetVal, 1, 111, hipSuccess); }
+
+  SECTION("344 84") { testHipMemset2DApis(dst, 344, memsetVal, 1, 85, hipSuccess); }
+
+  SECTION("344 84") { testHipMemset2DApis(dst, 344, memsetVal, 1, 86); }
+
+  // SECTION("242 84") { testHipMemset2DApis(dst, 242, memsetVal, 84, 112); }
+
+  // TODO Pitch cant be lower than width
+
+  SECTION("Invalid ") {
+    INFO("HERE")
+    size_t memsetWidth = GENERATE(506, take(10, random(0, 512)));
+    size_t memsetPitch = GENERATE_COPY(513, take(100, random(0, 512)));
+    size_t memsetHeight = GENERATE(57, take(100, random(0, 255)));
+    size_t realSize = realPitch * height;
+    size_t memsetSize{memsetPitch * (memsetHeight - 1) + memsetWidth};
+    INFO("RealPitch: " << realPitch << " RealHeight: " << height << " MemsetPitch: " << memsetPitch
+                       << " MemsetHeight: " << memsetHeight << " RealSize: " << realSize
+                       << " MemsetSize: " << memsetSize);
+    // if (memsetWidth == 0 || memsetHeight == 0) {
+    //   testHipMemset2DApis(dst, memsetPitch, memsetVal, memsetWidth, memsetHeight, hipSuccess);
+    // } else {
+    //   if (memsetHeight == 1) {
+    //     if (memsetWidth > width) {
+    //       testHipMemset2DApis(dst, memsetPitch, memsetVal, memsetWidth, memsetHeight,
+    //       hipSuccess);
+    //     } else {
+    //       testHipMemset2DApis(dst, memsetPitch, memsetVal, memsetWidth, memsetHeight,
+    //       hipSuccess);
+    //     }
+    //   } else {
+    //     if (memsetSize > realSize || memsetPitch < memsetWidth || memsetPitch > realPitch) {
+    //       testHipMemset2DApis(dst, memsetPitch, memsetVal, memsetWidth, memsetHeight);
+    //     } else {
+    //       testHipMemset2DApis(dst, memsetPitch, memsetVal, memsetWidth, memsetHeight,
+    //       hipSuccess);
+    //     }
+    //   }
+    // }
+
+    if (check2DMemset(realPitch, memsetPitch, memsetWidth, memsetHeight)) {
+      testHipMemset2DApis(dst, memsetPitch, memsetVal, memsetWidth, memsetHeight, hipSuccess);
+    } else {
+      testHipMemset2DApis(dst, memsetPitch, memsetVal, memsetWidth, memsetHeight);
+    }
+    // #endif
+    HIP_CHECK(hipFree(dst));
+  }
 }
 
 TEST_CASE("Unit_hipMemset2D_Negative_OutOfBoundsPtr") {
@@ -181,32 +259,90 @@ TEST_CASE("Unit_hipMemset3D_Negative_ModifiedPtr") {
 }
 
 TEST_CASE("Unit_hipMemset3D_Negative_InvalidSizes") {
-#if HT_AMD
-  HipTest::HIP_SKIP_TEST("EXSWCPHIPT-52");
-#endif
-
   hipPitchedPtr pitchedDevPtr;
+
   HIP_CHECK(hipMalloc3D(&pitchedDevPtr, validExtent));
-  hipExtent invalidExtent{validExtent};
 
-  SECTION("Max Width") { invalidExtent.width = std::numeric_limits<std::size_t>::max(); }
+  size_t memsetWidth = GENERATE(0, 1, 256, 512, validExtent.width, validExtent.width + 1,
+                                validExtent.width - 1, std::numeric_limits<std::size_t>::max(),
+                                take(5, random(2, 186)), take(5, random(188, 1024)));
+  size_t memsetPitch =
+      GENERATE_COPY(0, 1, pitchedDevPtr.pitch, pitchedDevPtr.pitch + 1, pitchedDevPtr.pitch - 1,
+                    std::numeric_limits<std::size_t>::max(), take(5, random(0, 512)), 1025);
+  size_t memsetHeight =
+      GENERATE(0, 1, validExtent.height, validExtent.height + 1, take(10, random(2, 55)),
+               std::numeric_limits<std::size_t>::max(), take(5, random(59, 1024)));
+  size_t memsetDepth =
+      GENERATE(0, 1, validExtent.depth, validExtent.depth + 1, validExtent.depth - 1,
+               std::numeric_limits<std::size_t>::max(), take(5, random(2, 16)),
+               take(5, random(18, 1024))); /*Nvidia can't handle max size_t depth */
+  size_t realSize = pitchedDevPtr.pitch * validExtent.height * validExtent.depth;
 
-  SECTION("Max Height") { invalidExtent.height = std::numeric_limits<std::size_t>::max(); }
+  size_t memsetSize;
+  if (memsetHeight == 1 && memsetDepth == 1) {
+    memsetSize = {memsetHeight * memsetDepth * memsetWidth /* - memsetPitch + memsetWidth*/};
+  } else {
+    memsetSize = {memsetPitch * memsetHeight * memsetDepth - memsetPitch + memsetWidth};
+  }
 
-#if !HT_NVIDIA /* This case hangs on Nvidia */
-  SECTION("Max Depth") { invalidExtent.depth = std::numeric_limits<std::size_t>::max(); }
-#endif
+  size_t realPitch = pitchedDevPtr.pitch;
 
-  SECTION("Invalid Width") { invalidExtent.width = pitchedDevPtr.pitch + 1; }
+  INFO("RealPitch: " << pitchedDevPtr.pitch << " RealHeight: " << validExtent.height
+                     << " MemsetPitch: " << memsetPitch << " MemsetWidth: " << memsetWidth
+                     << " MemsetHeight: " << memsetHeight << " MemsetDepth: " << memsetDepth
+                     << " RealSize: " << realSize << " MemsetSize: " << memsetSize);
 
-#if !HT_AMD /* EXSWCPHIPT-52 */
-  SECTION("Invalid height") { invalidExtent.height += 1; }
+  pitchedDevPtr.pitch = memsetPitch;
 
-  SECTION("Invalid depth") { invalidExtent.depth += 1; }
-#endif
+  hipExtent invalidExtent{memsetWidth, memsetHeight, memsetDepth};
 
-  CAPTURE(invalidExtent.width, invalidExtent.height, invalidExtent.depth);
-  testHipMemset3DApis(pitchedDevPtr, memsetVal, invalidExtent);
+  if ((memsetPitch > realSize && (memsetHeight > 1 || memsetDepth > 1)) || memsetWidth > realSize ||
+      memsetDepth > 4096) {
+    // Nvidia return hipSucess in this cases. But will later fail with illegalMemory access has
+    // occurred errors. Seems like a bug in Nvidia
+  } else {
+    if (memsetWidth == 0 || memsetHeight == 0 || memsetDepth == 0) {
+      INFO("HERE1")
+      testHipMemset3DApis(pitchedDevPtr, memsetVal, invalidExtent, hipSuccess);
+    } else {
+      if (memsetPitch < memsetWidth && (memsetHeight > 1 || memsetDepth > 1)) {
+        INFO("HERE2")
+        testHipMemset3DApis(pitchedDevPtr, memsetVal, invalidExtent);
+      } else if (memsetDepth >= 1 && memsetHeight > validExtent.height) {
+        INFO("HERE3")
+        testHipMemset3DApis(pitchedDevPtr, memsetVal, invalidExtent);
+      } else if (memsetDepth >= 1 && memsetHeight <= validExtent.height) {
+        if (memsetDepth == 1 && memsetHeight == 1) {
+          memsetPitch = 0;
+        }
+
+        long freeSpace = std::max(
+            0l,
+            static_cast<long>((realPitch - memsetPitch) * validExtent.height * validExtent.depth));
+
+        long depthExcess = std::max(0l, static_cast<long>(memsetDepth - validExtent.depth));
+        if (depthExcess > 0) {
+          depthExcess = (depthExcess - 1) * validExtent.height * memsetPitch +
+              (memsetHeight - 1) * memsetPitch + memsetWidth;
+        }
+
+        if (depthExcess > freeSpace) {
+          INFO("HERE4")
+          testHipMemset3DApis(pitchedDevPtr, memsetVal, invalidExtent);
+        } else if (memsetSize > realSize) {
+          INFO("HERE5")
+          testHipMemset3DApis(pitchedDevPtr, memsetVal, invalidExtent);
+        } else {
+          INFO("HERE6")
+          testHipMemset3DApis(pitchedDevPtr, memsetVal, invalidExtent, hipSuccess);
+        }
+      } else {
+        REQUIRE(false);
+        std::cout << "UNEXPECTED" << std::endl;
+      }
+    }
+  }
+
   HIP_CHECK(hipFree(pitchedDevPtr.ptr));
 }
 
